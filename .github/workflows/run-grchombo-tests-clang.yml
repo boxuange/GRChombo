@@ -16,6 +16,7 @@ jobs:
       with:
         repository: GRChombo/Chombo
         path: Chombo
+        ref: enhancement/llvm_support
 
     - name: Checkout GRChombo
       uses: actions/checkout@v2
