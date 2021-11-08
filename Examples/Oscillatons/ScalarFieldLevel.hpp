@@ -12,6 +12,7 @@
 #include "Potential.hpp"
 #include "ScalarField.hpp"
 
+
 //!  A class for the evolution of a scalar field, minimally coupled to gravity
 /*!
      The class takes some initial data for a scalar field (variables phi and Pi)

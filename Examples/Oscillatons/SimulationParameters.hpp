@@ -14,6 +14,7 @@
 #include "InitialScalarData.hpp"
 #include "KerrBH.hpp"
 #include "Potential.hpp"
+#include "Oscilloton.hpp"
 
 class SimulationParameters : public SimulationParametersBase
 {
@@ -28,18 +29,42 @@ class SimulationParameters : public SimulationParametersBase
     void read_params(GRParmParse &pp)
     {
         // Initial scalar field data
-        initial_params.center =
-            center; // already read in SimulationParametersBase
+
         pp.load("G_Newton", G_Newton,
                 0.0); // for now the example neglects backreaction
-        pp.load("scalar_amplitude", initial_params.amplitude, 0.1);
-        pp.load("scalar_width", initial_params.width, 1.0);
+
         pp.load("scalar_mass", potential_params.scalar_mass, 0.1);
+        pp.load("threshold_rho", threshold_rho, 0.1); // this param for regridding
+        pp.load("threshold_K", threshold_K, 0.1);  // this param for regridding
 
         // Initial Kerr data
-        pp.load("kerr_mass", kerr_params.mass, 1.0);
-        pp.load("kerr_spin", kerr_params.spin, 0.0);
-        pp.load("kerr_center", kerr_params.center, center);
+
+        pp.load("amplitudeSF", initial_params.amplitudeSF);
+        pp.load("widthSF", initial_params.widthSF);
+        pp.load("r_zero", initial_params.r_zero);
+
+        // set the velocity
+        pp.get("vx",vx);
+        pp.get("vx2",vx2);
+
+        //Boost Parameters
+        initial_params.vx = vx;
+        initial_params.vx2 = vx2;
+
+
+
+        for(int i=0; i < CH_SPACEDIM; i++)
+        {
+            pp.get("centerSF", centerSF[i], i);
+        }
+        for(int i=0; i < CH_SPACEDIM; i++)
+        {
+            pp.get("centerSF2", centerSF2[i], i);
+        }
+        
+        //set the center
+        initial_params.centerSF = centerSF;
+        initial_params.centerSF2 = centerSF2;
     }
 
     void check_params()
@@ -49,31 +74,25 @@ class SimulationParameters : public SimulationParametersBase
                            0.2 / coarsest_dx / dt_multiplier,
                        "oscillations of scalar field do not appear to be "
                        "resolved on coarsest level");
-        warn_parameter("scalar_width", initial_params.width,
-                       initial_params.width < 0.5 * L,
-                       "is greater than half the domain size");
-        warn_parameter("kerr_mass", kerr_params.mass, kerr_params.mass >= 0.0,
-                       "should be >= 0.0");
-        check_parameter("kerr_spin", kerr_params.spin,
-                        std::abs(kerr_params.spin) <= kerr_params.mass,
-                        "must satisfy |a| <= M = " +
-                            std::to_string(kerr_params.mass));
-        FOR(idir)
-        {
-            std::string name = "kerr_center[" + std::to_string(idir) + "]";
-            warn_parameter(
-                name, kerr_params.center[idir],
-                (kerr_params.center[idir] >= 0) &&
-                    (kerr_params.center[idir] <= (ivN[idir] + 1) * coarsest_dx),
-                "should be within the computational domain");
-        }
     }
+
+   // this is the Oscilloton params
+    Oscilloton::params_t initial_params;
+    std::array<double, CH_SPACEDIM> centerSF;
+    std::array<double, CH_SPACEDIM> centerSF2;
+
 
     // Initial data for matter and potential and BH
     double G_Newton;
-    InitialScalarData::params_t initial_params;
     Potential::params_t potential_params;
-    KerrBH::params_t kerr_params;
+
+
+
+    double threshold_rho;
+    double threshold_K;
+
+    double vx;
+    double vx2;
 };
 
 #endif /* SIMULATIONPARAMETERS_HPP_ */

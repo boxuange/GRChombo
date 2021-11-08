@@ -19,7 +19,7 @@
 #include "TwoPuncturesInitialData.hpp"
 #include "Weyl4.hpp"
 #include "WeylExtraction.hpp"
-
+#include "Oscilloton.hpp"
 
 // For RHS update
 #include "MatterCCZ4RHS.hpp"
@@ -28,7 +28,7 @@
 #include "NewMatterConstraints.hpp"
 
 // For tag cells
-#include "FixedGridsTaggingCriterion.hpp"
+#include "RhoAndKExtractionTaggingCriterion.hpp"
 
 // Problem specific includes
 #include "ComputePack.hpp"
@@ -38,6 +38,7 @@
 #include "Potential.hpp"
 #include "ScalarField.hpp"
 #include "SetValue.hpp"
+#include "MatterEnergyDensity.hpp"
 
 // Things to do at each advance step, after the RK4 is calculated
 void ScalarFieldLevel::specificAdvance()
@@ -63,14 +64,23 @@ void ScalarFieldLevel::initialData()
 
     // First set everything to zero then initial conditions for scalar field -
     // here a Kerr BH and a scalar field profile
-    BoxLoops::loop(
-        make_compute_pack(SetValue(0.), KerrBH(m_p.kerr_params, m_dx),
-                          InitialScalarData(m_p.initial_params, m_dx)),
-        m_state_new, m_state_new, INCLUDE_GHOST_CELLS);
+    
+    double spacing = 0.01;
+    BoxLoops::loop(make_compute_pack(SetValue(0.0), Oscilloton(m_p.initial_params, m_dx, spacing)),
+                   m_state_new, m_state_new, FILL_GHOST_CELLS, disable_simd());
 
     fillAllGhosts();
     BoxLoops::loop(GammaCalculator(m_dx), m_state_new, m_state_new,
                    EXCLUDE_GHOST_CELLS);
+
+    // compute rho
+    Potential potential(m_p.potential_params);
+    ScalarFieldWithPotential scalar_field(potential);
+
+    BoxLoops::loop(
+            MatterEnergyDensity<ScalarFieldWithPotential>(scalar_field, m_dx),
+            m_state_new, m_state_diagnostics, EXCLUDE_GHOST_CELLS);
+
 }
 
 #ifdef CH_USE_HDF5
@@ -121,7 +131,14 @@ void ScalarFieldLevel::specificEvalRHS(GRLevelData &a_soln, GRLevelData &a_rhs,
 // Things to do at ODE update, after soln + rhs
 void ScalarFieldLevel::specificUpdateODE(GRLevelData &a_soln,
                                          const GRLevelData &a_rhs, Real a_dt)
-{
+{  // compute rho
+    Potential potential(m_p.potential_params);
+    ScalarFieldWithPotential scalar_field(potential);
+
+    BoxLoops::loop(
+        MatterEnergyDensity<ScalarFieldWithPotential>(scalar_field, m_dx),
+        m_state_new, m_state_diagnostics, EXCLUDE_GHOST_CELLS);
+
     // Enforce trace free A_ij
     BoxLoops::loop(TraceARemoval(), a_soln, a_soln, INCLUDE_GHOST_CELLS);
 }
@@ -136,7 +153,7 @@ void ScalarFieldLevel::computeTaggingCriterion(FArrayBox &tagging_criterion,
                                                const FArrayBox &current_state)
 {
     BoxLoops::loop(
-        FixedGridsTaggingCriterion(m_dx, m_level, 2.0 * m_p.L, m_p.center),
+            RhoAndKExtractionTaggingCriterion(m_dx, m_level, m_p.threshold_rho, m_p.threshold_K, m_p.extraction_params, m_p.activate_extraction),
         current_state, tagging_criterion);
 }
 

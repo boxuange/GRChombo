@@ -17,8 +17,8 @@ checkpoint_interval = 500
 # set to 0 to turn off plot files (except at t=0 and t=stop_time)
 # set to -1 to never ever print plotfiles
 plot_interval = 1
-num_plot_vars = 2
-plot_vars = chi phi
+num_plot_vars = 5
+plot_vars = chi phi rho Ham Mom
 
 # subpaths - specific directories for hdf5, pout, extraction data
 # (these are created at runtime)
@@ -78,6 +78,12 @@ regrid_interval   = 0   0   0   0   0   0
 
 regrid_interval = 0 0 0 0 0 0
 
+# Regridding
+# Thresholds on the change across a cell which prompts regrid
+regrid_threshold_chi = 0.05
+regrid_threshold_phi = 0.00025
+max_matter_level = 4
+
 # Max and min box sizes
 max_box_size = 16
 min_box_size = 16
@@ -87,7 +93,7 @@ tag_buffer_size = 0 # this example uses a fixed grid
 # grid_buffer_size = 8
 # fill_ratio = 0.7
 # num_ghosts = 3
-# center = 256.0 256.0 256.0 # defaults to center of the grid
+# center = 512.0 512.0 0.0 # defaults to center of the grid
 
 #################################################
 # Boundary Conditions parameters
@@ -98,8 +104,8 @@ isPeriodic = 0 0 0
 # 0 = static, 1 = sommerfeld, 2 = reflective
 # 3 = extrapolating, 4 = mixed
 # (see BoundaryConditions.hpp for details)
-hi_boundary = 4 4 4
-lo_boundary = 2 2 2
+hi_boundary = 1 1 1
+lo_boundary = 1 1 2
 
 # if reflective boundaries selected, must set
 # parity of all vars (in order given by UserVariables.hpp)
@@ -112,7 +118,7 @@ vars_parity            = 0 0 4 6 0 5 0    #chi and hij
                          0 1 2 3          #Theta and Gamma
                          0 1 2 3 1 2 3    #lapse shift and B
                          0 0              #phi and Pi
-vars_parity_diagnostic = 0 1 2 3          #Ham and Mom
+vars_parity_diagnostic = 0 0 0 0 0 0      #chi phi rho Ham Mom
 
 # if sommerfeld boundaries selected, must select
 # non zero asymptotic values
@@ -130,7 +136,7 @@ extrapolating_vars = phi Pi
 
 # dt will be dx*dt_multiplier on each grid level
 dt_multiplier = 0.25
-stop_time = 100.0
+stop_time = 100000.0
 # max_steps = 4
 
 # Spatial derivative order (only affects CCZ4 RHS)
@@ -162,9 +168,37 @@ sigma = 0.3
 # min_lapse = 1.e-4
 
 #################################################
+# SF Initial data
+amplitudeSF = 0.0025
+widthSF = 1.0
+r_zero = 5.0
+scalar_mass = 1.0
+
+# parameter for bubble centre - defaulted to center of grid
+# so only uncomment if you want to place it off center
+#Boost Parameters
+vx = 0.09
+vx2 = -0.09
+
+# SF parameter for bubble centre - don't forget to update it
+# if L is changed!
+centerSF = 128 136 0
+centerSF2 = 128 120 0
+#gauge_center = 512 512 0
+inital_guess = 0.5
+
+#decay_time = 7.0
+#decay_radius = 35.8
+
+# Relaxation paramters
+# how long and how fast to relax
+relaxtime = 0.0
+relaxspeed = 0.01
+
+#################################################
 # Extraction parameters
 
-#extraction_center = 64 64 64 # defaults to center
+extraction_center = 128 128 0 # defaults to center
 activate_extraction = 1
 num_extraction_radii = 2
 extraction_radii = 60.0 100.0
