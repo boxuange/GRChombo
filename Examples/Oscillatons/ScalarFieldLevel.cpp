@@ -20,6 +20,8 @@
 #include "Weyl4.hpp"
 #include "WeylExtraction.hpp"
 #include "Oscilloton.hpp"
+#include "MatterEnergy.hpp"
+#include "FluxExtraction.hpp"
 
 // For RHS update
 #include "MatterCCZ4RHS.hpp"
@@ -76,7 +78,7 @@ void ScalarFieldLevel::initialData()
     // compute rho
     Potential potential(m_p.potential_params);
     ScalarFieldWithPotential scalar_field(potential);
-
+    fillAllGhosts();
     BoxLoops::loop(
             MatterEnergyDensity<ScalarFieldWithPotential>(scalar_field, m_dx),
             m_state_new, m_state_diagnostics, EXCLUDE_GHOST_CELLS);
@@ -134,7 +136,7 @@ void ScalarFieldLevel::specificUpdateODE(GRLevelData &a_soln,
 {  // compute rho
     Potential potential(m_p.potential_params);
     ScalarFieldWithPotential scalar_field(potential);
-
+    fillAllGhosts();
     BoxLoops::loop(
         MatterEnergyDensity<ScalarFieldWithPotential>(scalar_field, m_dx),
         m_state_new, m_state_diagnostics, EXCLUDE_GHOST_CELLS);
@@ -153,7 +155,7 @@ void ScalarFieldLevel::computeTaggingCriterion(FArrayBox &tagging_criterion,
                                                const FArrayBox &current_state)
 {
     BoxLoops::loop(
-            RhoAndKExtractionTaggingCriterion(m_dx, m_level, m_p.threshold_rho, m_p.threshold_K, m_p.extraction_params, m_p.activate_extraction),
+            RhoAndKExtractionTaggingCriterion(m_dx, m_level, m_p.threshold_rho, m_p.threshold_K, m_p.extraction_params, m_p.activate_extraction, m_p.max_matter_level),
         current_state, tagging_criterion);
 }
 
@@ -167,7 +169,39 @@ void ScalarFieldLevel::specificPostTimeStep()
     // called during setup at t=0 from Main
     // bool first_step = (m_time == m_dt); // if not called in Main
 
+    // write out the integral after each coarse timestep
+    if (m_level == 0)
+    {
+        bool first_step = (m_time == m_dt);
 
+        // integrate the densities and write to a file
+        AMRReductions<VariableType::diagnostic> amr_reductions(m_gr_amr);
+
+        double rho2_sum = amr_reductions.sum(c_rho2);
+        double source2_sum = amr_reductions.sum(c_source2);
+
+        SmallDataIO integral_file("VolumeIntegrals", m_dt, m_time,
+                                  m_restart_time, SmallDataIO::APPEND,
+                                  first_step);
+        // remove any duplicate data if this is post restart
+        integral_file.remove_duplicate_time_data();
+        std::vector<double> data_for_writing = { rho2_sum, source2_sum};
+        // write data
+        if (first_step)
+        {
+            integral_file.write_header_line({ "rho2", "source2"});
+        }
+        integral_file.write_time_data_line(data_for_writing);
+
+        // Now refresh the interpolator and do the interpolation
+        bool fill_ghosts = false;
+        m_gr_amr.m_interpolator->refresh(fill_ghosts);
+        m_gr_amr.fill_multilevel_ghosts(VariableType::diagnostic,
+                                        Interval (c_flux2,c_flux2));
+        FluxExtraction my_extraction(m_p.extraction_params, m_dt, m_time,
+                                     m_restart_time);
+        my_extraction.execute_query(m_gr_amr.m_interpolator);
+    }
 
     if (m_p.activate_extraction == 1) {
         int min_level = m_p.extraction_params.min_extraction_level();

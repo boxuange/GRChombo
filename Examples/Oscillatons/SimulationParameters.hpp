@@ -16,6 +16,7 @@
 #include "Potential.hpp"
 #include "Oscilloton.hpp"
 
+
 class SimulationParameters : public SimulationParametersBase
 {
   public:
@@ -36,6 +37,7 @@ class SimulationParameters : public SimulationParametersBase
         pp.load("scalar_mass", potential_params.scalar_mass, 0.1);
         pp.load("threshold_rho", threshold_rho, 0.1); // this param for regridding
         pp.load("threshold_K", threshold_K, 0.1);  // this param for regridding
+        pp.load("max_matter_level", max_matter_level, 1000);
 
         // Initial Kerr data
 
@@ -90,6 +92,7 @@ class SimulationParameters : public SimulationParametersBase
 
     double threshold_rho;
     double threshold_K;
+    int max_matter_level;
 
     double vx;
     double vx2;

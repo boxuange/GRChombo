@@ -21,13 +21,14 @@ class RhoAndKExtractionTaggingCriterion
     const double m_threshold_K;
     const SphericalExtraction::params_t m_params;
     const bool m_activate_extraction;
+    const int m_max_matter_level;
 
   public:
     RhoAndKExtractionTaggingCriterion(double dx, const int a_level, double threshold_rho,
-                                      double threshold_K, const SphericalExtraction::params_t a_params, const bool activate_extraction = false)
+                                      double threshold_K, const SphericalExtraction::params_t a_params, const bool activate_extraction = false, int a_max_matter_level =1000)
 
         : m_dx(dx), m_level(a_level), m_deriv(dx), m_threshold_rho(threshold_rho),
-          m_threshold_K(threshold_K), m_params(a_params), m_activate_extraction(activate_extraction) {};
+          m_threshold_K(threshold_K), m_params(a_params), m_activate_extraction(activate_extraction), m_max_matter_level(a_max_matter_level) {};
 
 
     template <class data_t> void compute(Cell<data_t> current_cell) const
@@ -42,12 +43,14 @@ class RhoAndKExtractionTaggingCriterion
         data_t mod_d1_K = 0;
         FOR(idir)
         {
-            mod_d1_rho += d1_rho[idir] * d1_rho[idir];
+
+            if(m_level < m_max_matter_level){mod_d1_rho += d1_rho[idir] * d1_rho[idir];}
             mod_d1_K += d1_K[idir] * d1_K[idir];
         }
 
         data_t criterion = m_dx * (sqrt(mod_d1_rho) / m_threshold_rho +
                                    sqrt(mod_d1_K) / m_threshold_K);
+        
 
         if (m_activate_extraction)
         {
