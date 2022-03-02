@@ -41,6 +41,7 @@
 #include "ScalarField.hpp"
 #include "SetValue.hpp"
 #include "MatterEnergyDensity.hpp"
+#include "MovingPunctureGauge.hpp"
 
 // Things to do at each advance step, after the RK4 is calculated
 void ScalarFieldLevel::specificAdvance()
@@ -162,6 +163,23 @@ void ScalarFieldLevel::computeTaggingCriterion(FArrayBox &tagging_criterion,
 
 void ScalarFieldLevel::specificPostTimeStep()
 {
+
+      double coarsest_dt = m_p.coarsest_dx * m_p.dt_multiplier;
+
+    const double remainder = fmod(m_time, coarsest_dt);
+    if (min(abs(remainder), abs(remainder - coarsest_dt)) < 1.0e-8)
+    {
+        // calculate the density of the PF, but excise the BH region completely
+        fillAllGhosts();
+        Potential potential(m_p.potential_params);
+        ScalarFieldWithPotential scalar_field(potential);
+
+        BoxLoops::loop(MatterEnergy<ScalarFieldWithPotential>(scalar_field,
+                                                              m_dx, m_p.center),
+                       m_state_new, m_state_diagnostics, EXCLUDE_GHOST_CELLS);
+
+    }
+
     CH_TIME("ScalarFieldLevel::specificPostTimeStep");
 
     bool first_step =

@@ -88,15 +88,45 @@ class Oscilloton {
     double d_phi_rad_dr[m_file_length],d_phi1_dr[m_file_length], d_phi3_dr[m_file_length], d_phi5_dr[m_file_length], d_phi7_dr[m_file_length], d_phi9_dr[m_file_length], d_phi11_dr[m_file_length];
 
     // New Linear Interpolator - 1D array with data (coords) to value
-    template <class data_t>
-      double linear_interpolation_new(Coordinates<data_t> coords, const double (*data_jt)) const ;
+  //  template <class data_t>
+
 
     // New Linear Interpolator - 1D array with data (coords) to value
-    template <class data_t>
-      double linear_interpolation_new2(Coordinates<data_t> coords, const double (*data_jt)) const ;
+   // template <class data_t>
+   //   double linear_interpolation_new2(Coordinates<data_t> coords, const double (*data_jt)) const ;
+    
+    // New Linear Interpolator - 1D array with data (coords) to value
+    //template <class data_t>
+     // double linear_interpolation_new3(Coordinates<data_t> coords, const double (*data_jt)) const ;
 
-  public:
+public:
+
+    struct StarData{
+
+        double phi, Pi, lapse;
+        double beta_U[3];
+        double beta[3];
+        Tensor<2, double> h_cartesian;
+        Tensor<2, double> K_cartesian;
+        Tensor<2, double> h_cartesian_UU;
+
+        // given params
+        double StarX, StarY, StarZ;
+        double vx;
+
+    };
+
     const params_t m_params;//!< The matter params
+    
+    template <class data_t>
+    void Spawn(StarData &DeStar)const;
+
+  template <class data_t>
+  double linear_interpolation_new(double vx, double t,double x, double y, double z, const double (*data_jt)) const ;
+
+  template <class data_t>
+  void test2022(data_t type);
+
 };
 
 #include "Oscilloton.impl.hpp"
